@@ -2,13 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 
-# Google Form Baru
-FORM_URL = "https://docs.google.com/forms/u/0/d/e/1FAIpQLSdYY2hbRIhrCY_a06uH0keEsBBu8x6P3AzpZ2BmcmVERjaxpQ/formResponse"
-
-st.set_page_config(
-    page_title="Excel ➜ Google Form Importer",
-    layout="wide"
-)
+FORM_URL = "https://docs.google.com/forms/u/0/d/e/1FAIpQLSdYY2hbRlhrCY_a06uH0keEsBBu8x6P3AzpZ2BmcmVERjaxpQ/formResponse"
 
 st.title("Excel ➜ Google Form Importer")
 
@@ -27,7 +21,9 @@ if file:
         f"Total data: {len(df)}"
     )
 
-    if st.button("Kirim ke Google Form"):
+    if st.button(
+        "Kirim ke Google Form"
+    ):
 
         progress = st.progress(0)
 
@@ -39,35 +35,54 @@ if file:
 
             payload = {}
 
-            # ==========================
-            # FIELD UTAMA
-            # ==========================
-
+            # ======================
+            # NAMA
+            # ======================
             payload["entry.154565194"] = str(
                 row.get("Nama", "")
             ).strip()
 
+            # ======================
+            # SBU
+            # ======================
             payload["entry.1778899713"] = str(
                 row.get("SBU", "")
             ).strip()
 
+            # ======================
+            # ID TICKET
+            # ======================
             payload["entry.1082086380"] = str(
                 row.get("ID TICKET", "")
             ).strip()
 
+            # ======================
+            # ESKALASI BACK OFFICE
+            # ======================
             payload["entry.822984039"] = str(
-                row.get("Eskalasi Back Office", "")
+                row.get(
+                    "Eskalasi Back Office",
+                    ""
+                )
             ).strip()
 
+            # ======================
+            # HASIL ESKALASI
+            # ======================
             payload["entry.49503729"] = str(
-                row.get("Hasil Eskalasi", "")
+                row.get(
+                    "Hasil Eskalasi",
+                    ""
+                )
             ).strip()
 
-            # ==========================
+            # ======================
             # KETERANGAN TAMBAHAN
-            # ==========================
-
-            if "Keterangan Tambahan" in df.columns:
+            # ======================
+            if (
+                "Keterangan Tambahan"
+                in df.columns
+            ):
 
                 ket = str(
                     row.get(
@@ -78,14 +93,17 @@ if file:
 
                 if (
                     ket
-                    and ket.lower() != "nan"
+                    and ket.lower()
+                    != "nan"
                 ):
-                    payload["entry.564067612"] = ket
 
-            # ==========================
+                    payload[
+                        "entry.546067612"
+                    ] = ket
+
+            # ======================
             # PICK UP TIME
-            # ==========================
-
+            # ======================
             try:
 
                 pickup = str(
@@ -95,52 +113,62 @@ if file:
                     )
                 ).strip()
 
-                if (
-                    pickup
-                    and pickup.lower() != "nan"
-                ):
+                if pickup:
 
-                    h, m, s = pickup.split(":")
+                    h, m, s = (
+                        pickup.split(":")
+                    )
 
-                    payload["entry.141665543_hour"] = h
-                    payload["entry.141665543_minute"] = m
-                    payload["entry.141665543_second"] = s
+                    payload[
+                        "entry.141665543_hour"
+                    ] = h
 
-            except Exception:
+                    payload[
+                        "entry.141665543_minute"
+                    ] = m
+
+                    payload[
+                        "entry.141665543_second"
+                    ] = s
+
+            except:
                 pass
 
-            # ==========================
+            # ======================
             # CREATE TICKET DATE
-            # ==========================
-
+            # ======================
             try:
 
                 tanggal = pd.to_datetime(
                     row.get(
                         "Create Ticket Date"
-                    ),
-                    dayfirst=True
+                    )
                 )
 
-                payload["entry.1418866853_day"] = str(
+                payload[
+                    "entry.1418866853_day"
+                ] = str(
                     tanggal.day
                 )
 
-                payload["entry.1418866853_month"] = str(
+                payload[
+                    "entry.1418866853_month"
+                ] = str(
                     tanggal.month
                 )
 
-                payload["entry.1418866853_year"] = str(
+                payload[
+                    "entry.1418866853_year"
+                ] = str(
                     tanggal.year
                 )
 
-            except Exception:
+            except:
                 pass
 
-            # ==========================
+            # ======================
             # CREATE TICKET TIME
-            # ==========================
-
+            # ======================
             try:
 
                 jam = str(
@@ -150,23 +178,26 @@ if file:
                     )
                 ).strip()
 
-                if (
-                    jam
-                    and jam.lower() != "nan"
-                ):
+                if jam:
 
-                    h, m, s = jam.split(":")
+                    h, m, s = (
+                        jam.split(":")
+                    )
 
-                    payload["entry.2062984122_hour"] = h
-                    payload["entry.2062984122_minute"] = m
-                    payload["entry.2062984122_second"] = s
+                    payload[
+                        "entry.2062984122_hour"
+                    ] = h
 
-            except Exception:
+                    payload[
+                        "entry.2062984122_minute"
+                    ] = m
+
+                    payload[
+                        "entry.2062984122_second"
+                    ] = s
+
+            except:
                 pass
-
-            # ==========================
-            # SUBMIT
-            # ==========================
 
             try:
 
@@ -174,32 +205,40 @@ if file:
                     FORM_URL,
                     data=payload,
                     headers={
-                        "User-Agent": "Mozilla/5.0",
-                        "Referer": FORM_URL
+                        "User-Agent":
+                        "Mozilla/5.0",
+                        "Referer":
+                        "https://docs.google.com/forms/"
                     },
-                    timeout=20,
+                    timeout=30,
                     allow_redirects=False
                 )
 
-                if response.status_code in [200, 302]:
+                if response.status_code in [
+                    200,
+                    302
+                ]:
 
                     sukses += 1
 
                 else:
 
                     st.error(
-                        f"Baris {idx+1} gagal "
-                        f"({response.status_code})"
+                        f"Baris {idx+1} gagal ({response.status_code})"
                     )
 
-                    st.write("Payload:")
+                    st.write(
+                        "Payload:"
+                    )
+                    st.json(
+                        payload
+                    )
 
-                    st.json(payload)
-
-                    st.write("Response:")
-
+                    st.write(
+                        "Response:"
+                    )
                     st.text(
-                        response.text[:2000]
+                        response.text[:3000]
                     )
 
                     break
@@ -213,7 +252,8 @@ if file:
                 break
 
             progress.progress(
-                (idx + 1) / len(df)
+                (idx + 1)
+                / len(df)
             )
 
         st.success(
