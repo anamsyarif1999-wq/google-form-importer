@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 
-FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdJzVCp0QswGIQN_eWWT8zCbUq4tHcv4u9RfYEpjWE54vst1g/formResponse"
+FORM_URL = "https://docs.google.com/forms/u/0/d/e/1FAIpQLSdJzVCp0QswGlQN_eWWT8zCbUq4tHcv4u9RfYEpjWE54vst1g/formResponse"
 
 FIELD_MAP = {
     "Nama": "entry.1778972854",
