@@ -10,6 +10,9 @@ FIELD_MAP = {
     "ID TICKET": "entry.1131610637",
     "SBU": "entry.1847893431",
     "Eskalasi Back Office": "entry.2054975984",
+    "Pick Up Time": "entry.1083825887",
+    "Create Ticket Date": "entry.405968346",
+    "Create Ticket Time": "entry.1785211983",
     "Hasil Eskalasi": "entry.1035810770"
 }
 
@@ -28,12 +31,44 @@ if file:
 
         for idx, (_, row) in enumerate(df.iterrows()):
             payload = {
-    FIELD_MAP["Nama"]: row.get("Nama",""),
-    FIELD_MAP["ID TICKET"]: row.get("ID TICKET",""),
-    FIELD_MAP["SBU"]: row.get("SBU",""),
-    FIELD_MAP["Eskalasi Back Office"]: row.get("Eskalasi Back Office",""),
-    FIELD_MAP["Hasil Eskalasi"]: row.get("Hasil Eskalasi","")
+    FIELD_MAP["Nama"]: row.get("Nama", ""),
+    FIELD_MAP["ID TICKET"]: row.get("ID TICKET", ""),
+    FIELD_MAP["SBU"]: row.get("SBU", ""),
+    FIELD_MAP["Eskalasi Back Office"]: row.get("Eskalasi Back Office", ""),
+    FIELD_MAP["Hasil Eskalasi"]: row.get("Hasil Eskalasi", "")
 }
+            # Pick Up Time (HH:MM:SS)
+pickup = str(row.get("Pick Up Time", "00:00:00"))
+
+try:
+    h, m, s = pickup.split(":")
+except:
+    h, m, s = "00", "00", "00"
+
+payload["entry.1083825887_hour"] = h
+payload["entry.1083825887_minute"] = m
+payload["entry.1083825887_second"] = s
+
+
+# Create Ticket Date (DD/MM/YYYY atau YYYY-MM-DD)
+tanggal = pd.to_datetime(row.get("Create Ticket Date"))
+
+payload["entry.405968346_day"] = str(tanggal.day)
+payload["entry.405968346_month"] = str(tanggal.month)
+payload["entry.405968346_year"] = str(tanggal.year)
+
+
+# Create Ticket Time (HH:MM:SS)
+ctt = str(row.get("Create Ticket Time", "00:00:00"))
+
+try:
+    h2, m2, s2 = ctt.split(":")
+except:
+    h2, m2, s2 = "00", "00", "00"
+
+payload["entry.1785211983_hour"] = h2
+payload["entry.1785211983_minute"] = m2
+payload["entry.1785211983_second"] = s2
             try:
                 r = requests.post(FORM_URL, data=payload, timeout=20)
 
