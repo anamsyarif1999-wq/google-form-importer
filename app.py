@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 
-FORM_URL = "https://docs.google.com/forms/u/0/d/e/1FAIpQLSdJzVCp0QswGlQN_eWWT8zCbUq4tHcv4u9RfYEpjWE54vst1g/formResponse"
+FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdJzVCp0QswGlQN_eWWT8zCbUq4tHcv4u9RfYEpjWE54vst1g/formResponse"
 
 FIELD_MAP = {
     "Nama": "entry.1778972854",
@@ -31,26 +31,33 @@ if file:
         for idx, row in df.iterrows():
 
             payload = {
-                FIELD_MAP["Nama"]: row.get("Nama", ""),
-                FIELD_MAP["ID TICKET"]: row.get("ID TICKET", ""),
-                FIELD_MAP["SBU"]: row.get("SBU", ""),
-                FIELD_MAP["Eskalasi Back Office"]: row.get("Eskalasi Back Office", ""),
-                FIELD_MAP["Hasil Eskalasi"]: row.get("Hasil Eskalasi", "")
+                FIELD_MAP["Nama"]: str(row.get("Nama", "")),
+                FIELD_MAP["ID TICKET"]: str(row.get("ID TICKET", "")),
+                FIELD_MAP["SBU"]: str(row.get("SBU", "")),
+                FIELD_MAP["Eskalasi Back Office"]: str(row.get("Eskalasi Back Office", "")),
+                FIELD_MAP["Hasil Eskalasi"]: str(row.get("Hasil Eskalasi", ""))
             }
 
-            # Pick Up Time
-            pickup = str(row.get("Pick Up Time", "00:00:00"))
-
+            # ======================
+            # PICK UP TIME
+            # ======================
             try:
-                h, m, s = pickup.split(":")
-            except:
-                h, m, s = "00", "00", "00"
+                pickup = pd.to_datetime(
+                    str(row.get("Pick Up Time"))
+                )
 
-            payload["entry.1083825887_hour"] = h
-            payload["entry.1083825887_minute"] = m
-            payload["entry.1083825887_second"] = s
+                payload["entry.1083825887_hour"] = f"{pickup.hour:02d}"
+                payload["entry.1083825887_minute"] = f"{pickup.minute:02d}"
+                payload["entry.1083825887_second"] = f"{pickup.second:02d}"
 
-            # Create Ticket Date
+            except Exception:
+                payload["entry.1083825887_hour"] = "00"
+                payload["entry.1083825887_minute"] = "00"
+                payload["entry.1083825887_second"] = "00"
+
+            # ======================
+            # CREATE TICKET DATE
+            # ======================
             try:
                 tanggal = pd.to_datetime(
                     row.get("Create Ticket Date")
@@ -60,38 +67,46 @@ if file:
                 payload["entry.405968346_month"] = str(tanggal.month)
                 payload["entry.405968346_year"] = str(tanggal.year)
 
-            except:
+            except Exception:
                 pass
 
-            # Create Ticket Time
-            ctt = str(row.get("Create Ticket Time", "00:00:00"))
-
+            # ======================
+            # CREATE TICKET TIME
+            # ======================
             try:
-                h2, m2, s2 = ctt.split(":")
-            except:
-                h2, m2, s2 = "00", "00", "00"
+                ctt = pd.to_datetime(
+                    str(row.get("Create Ticket Time"))
+                )
 
-            payload["entry.1785211983_hour"] = h2
-            payload["entry.1785211983_minute"] = m2
-            payload["entry.1785211983_second"] = s2
+                payload["entry.1785211983_hour"] = f"{ctt.hour:02d}"
+                payload["entry.1785211983_minute"] = f"{ctt.minute:02d}"
+                payload["entry.1785211983_second"] = f"{ctt.second:02d}"
+
+            except Exception:
+                payload["entry.1785211983_hour"] = "00"
+                payload["entry.1785211983_minute"] = "00"
+                payload["entry.1785211983_second"] = "00"
 
             try:
 
                 r = requests.post(
                     FORM_URL,
                     data=payload,
-                    timeout=20
+                    timeout=20,
+                    allow_redirects=False
                 )
 
-                if r.status_code == 200:
+                if r.status_code in [200, 302]:
                     sukses += 1
                 else:
                     st.write(
-                        f"Gagal: {r.status_code}"
+                        f"Baris {idx+1} gagal: {r.status_code}"
                     )
 
             except Exception as e:
-                st.write(e)
+                st.write(
+                    f"Baris {idx+1} error: {e}"
+                )
 
             progress.progress(
                 (idx + 1) / len(df)
