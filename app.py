@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import requests
-from datetime import datetime
 
 FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdJzVCp0QswGlQN_eWWT8zCbUq4tHcv4u9RfYEpjWE54vst1g/formResponse"
 
@@ -11,133 +10,157 @@ file = st.file_uploader("Upload Excel", type=["xlsx"])
 
 if file:
 
-    df = pd.read_excel(file)
+```
+df = pd.read_excel(file)
 
-    st.dataframe(df.head())
-    st.write(f"Total data: {len(df)}")
+st.dataframe(df.head())
+st.write(f"Total data: {len(df)}")
 
-    if st.button("Kirim ke Google Form"):
+if st.button("Kirim ke Google Form"):
 
-        progress = st.progress(0)
-        sukses = 0
+    progress = st.progress(0)
+    sukses = 0
 
-        for idx, row in df.iterrows():
+    for idx, row in df.iterrows():
 
-            payload = {
-                "entry.1778972854": str(row.get("Nama", "")).strip(),
-                "entry.1131610637": str(row.get("ID TICKET", "")).strip(),
-                "entry.1847893431": str(row.get("SBU", "")).strip(),
-                "entry.2054975984": str(row.get("Eskalasi Back Office", "")).strip(),
-                "entry.1035810770": str(row.get("Hasil Eskalasi", "")).strip(),
-            }
+        payload = {
 
-            # =========================
-            # Keterangan Tambahan
-            # =========================
+            # Nama
+            "entry.1778972854": str(
+                row.get("Nama", "")
+            ).strip(),
 
-            if "Keterangan Tambahan" in df.columns:
-                payload["entry.1789051105"] = str(
-                    row.get("Keterangan Tambahan", "")
-                ).strip()
+            # SBU
+            "entry.1131610637": str(
+                row.get("SBU", "")
+            ).strip(),
 
-            # =========================
-            # PICK UP TIME
-            # =========================
+            # ID Ticket
+            "entry.1847893431": str(
+                row.get("ID TICKET", "")
+            ).strip(),
 
-            try:
+            # Eskalasi Back Office
+            "entry.2054975984": str(
+                row.get("Eskalasi Back Office", "")
+            ).strip(),
 
-                pickup = row.get("Pick Up Time")
+            # Hasil Eskalasi
+            "entry.1035810770": str(
+                row.get("Hasil Eskalasi", "")
+            ).strip(),
+        }
 
-                if pd.notna(pickup):
+        # =========================
+        # KETERANGAN TAMBAHAN
+        # =========================
 
-                    pickup = pd.to_datetime(str(pickup))
+        if "Keterangan Tambahan" in df.columns:
 
-                    payload["entry.1083825887_hour"] = f"{pickup.hour:02d}"
-                    payload["entry.1083825887_minute"] = f"{pickup.minute:02d}"
-                    payload["entry.1083825887_second"] = f"{pickup.second:02d}"
+            ket = str(
+                row.get("Keterangan Tambahan", "")
+            ).strip()
 
-            except Exception as e:
-                st.write(f"Pickup Time error: {e}")
+            if ket:
+                payload["entry.1789051105"] = ket
 
-            # =========================
-            # CREATE TICKET DATE
-            # =========================
+        # =========================
+        # PICK UP TIME
+        # =========================
 
-            try:
+        try:
 
-                tanggal = pd.to_datetime(
-                    row.get("Create Ticket Date")
-                )
+            pickup = row.get("Pick Up Time")
 
-                payload["entry.405968346_day"] = str(tanggal.day)
-                payload["entry.405968346_month"] = str(tanggal.month)
-                payload["entry.405968346_year"] = str(tanggal.year)
+            if pd.notna(pickup):
 
-            except Exception as e:
-                st.write(f"Date error: {e}")
+                pickup = pd.to_datetime(str(pickup))
 
-            # =========================
-            # CREATE TICKET TIME
-            # =========================
+                payload["entry.1083825887_hour"] = f"{pickup.hour:02d}"
+                payload["entry.1083825887_minute"] = f"{pickup.minute:02d}"
+                payload["entry.1083825887_second"] = f"{pickup.second:02d}"
 
-            try:
+        except Exception as e:
+            st.write(f"Pickup Time error: {e}")
 
-                jam = row.get("Create Ticket Time")
+        # =========================
+        # CREATE TICKET DATE
+        # =========================
 
-                if pd.notna(jam):
+        try:
 
-                    jam = pd.to_datetime(str(jam))
+            tanggal = pd.to_datetime(
+                row.get("Create Ticket Date")
+            )
 
-                    payload["entry.1785211983_hour"] = f"{jam.hour:02d}"
-                    payload["entry.1785211983_minute"] = f"{jam.minute:02d}"
-                    payload["entry.1785211983_second"] = f"{jam.second:02d}"
+            payload["entry.405968346_day"] = str(tanggal.day)
+            payload["entry.405968346_month"] = str(tanggal.month)
+            payload["entry.405968346_year"] = str(tanggal.year)
 
-            except Exception as e:
-                st.write(f"Time error: {e}")
+        except Exception as e:
+            st.write(f"Date error: {e}")
 
-            try:
+        # =========================
+        # CREATE TICKET TIME
+        # =========================
 
-                response = requests.post(
-                    FORM_URL,
-                    data=payload,
-                    headers={
-                        "User-Agent": "Mozilla/5.0"
-                    },
-                    timeout=20,
-                    allow_redirects=False
-                )
+        try:
 
-                if response.status_code in [200, 302]:
-                    sukses += 1
+            jam = row.get("Create Ticket Time")
 
-                else:
+            if pd.notna(jam):
 
-                    st.error(
-                        f"Baris {idx+1} gagal: {response.status_code}"
-                    )
+                jam = pd.to_datetime(str(jam))
 
-                    st.write("Payload:")
+                payload["entry.1785211983_hour"] = f"{jam.hour:02d}"
+                payload["entry.1785211983_minute"] = f"{jam.minute:02d}"
+                payload["entry.1785211983_second"] = f"{jam.second:02d}"
 
-                    st.json(payload)
+        except Exception as e:
+            st.write(f"Time error: {e}")
 
-                    st.write("Response:")
+        try:
 
-                    st.text(response.text[:3000])
+            response = requests.post(
+                FORM_URL,
+                data=payload,
+                headers={
+                    "User-Agent": "Mozilla/5.0"
+                },
+                timeout=20,
+                allow_redirects=False
+            )
 
-                    break
+            if response.status_code in [200, 302]:
+                sukses += 1
 
-            except Exception as e:
+            else:
 
                 st.error(
-                    f"Baris {idx+1} error: {e}"
+                    f"Baris {idx+1} gagal: {response.status_code}"
                 )
+
+                st.write("Payload:")
+                st.json(payload)
+
+                st.write("Response:")
+                st.text(response.text[:3000])
 
                 break
 
-            progress.progress(
-                (idx + 1) / len(df)
+        except Exception as e:
+
+            st.error(
+                f"Baris {idx+1} error: {e}"
             )
 
-        st.success(
-            f"Selesai. Berhasil memproses {sukses} data."
+            break
+
+        progress.progress(
+            (idx + 1) / len(df)
         )
+
+    st.success(
+        f"Selesai. Berhasil memproses {sukses} data."
+    )
+```
