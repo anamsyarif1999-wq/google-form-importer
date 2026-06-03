@@ -35,16 +35,18 @@ if file:
                 FIELD_MAP["ID TICKET"]: str(row.get("ID TICKET", "")),
                 FIELD_MAP["SBU"]: str(row.get("SBU", "")),
                 FIELD_MAP["Eskalasi Back Office"]: str(row.get("Eskalasi Back Office", "")),
-                FIELD_MAP["Hasil Eskalasi"]: str(row.get("Hasil Eskalasi", ""))
+                FIELD_MAP["Hasil Eskalasi"]: str(row.get("Hasil Eskalasi", "")),
+
+                # FIELD WAJIB YANG BELUM ADA
+                # Ganti "Keterangan" jika nama kolom Excel berbeda
+                "entry.1789051105": str(row.get("Keterangan", ""))
             }
 
             # ======================
             # PICK UP TIME
             # ======================
             try:
-                pickup = pd.to_datetime(
-                    str(row.get("Pick Up Time"))
-                )
+                pickup = pd.to_datetime(str(row.get("Pick Up Time")))
 
                 payload["entry.1083825887_hour"] = f"{pickup.hour:02d}"
                 payload["entry.1083825887_minute"] = f"{pickup.minute:02d}"
@@ -102,6 +104,7 @@ if file:
                     st.write(
                         f"Baris {idx+1} gagal: {r.status_code}"
                     )
+                    st.write(payload)
 
             except Exception as e:
                 st.write(
