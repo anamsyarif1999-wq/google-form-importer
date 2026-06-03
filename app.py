@@ -20,141 +20,131 @@ if file:
         progress = st.progress(0)
         sukses = 0
 
+        session = requests.Session()
+
         for idx, row in df.iterrows():
 
-            payload = {
+            payload = {}
 
-                # Nama
-                "entry.1778972854": str(
-                    row.get("Nama", "")
-                ).strip(),
+            # Nama
+            payload["entry.1778972854"] = str(
+                row.get("Nama", "")
+            ).strip()
 
-                # ID TICKET
-                "entry.1131610637": str(
-                    row.get("ID TICKET", "")
-                ).strip(),
+            # SBU
+            payload["entry.1131610637"] = str(
+                row.get("SBU", "")
+            ).strip()
 
-                # SBU
-                "entry.1847893431": str(
-                    row.get("SBU", "")
-                ).strip(),
+            # ID Ticket
+            payload["entry.1847893431"] = str(
+                row.get("ID TICKET", "")
+            ).strip()
 
-                # Eskalasi Back Office
-                "entry.2054975984": str(
-                    row.get("Eskalasi Back Office", "")
-                ).strip(),
+            # Eskalasi Back Office
+            payload["entry.2054975984"] = str(
+                row.get("Eskalasi Back Office", "")
+            ).strip()
 
-                # Hasil Eskalasi
-                "entry.1035810770": str(
-                    row.get("Hasil Eskalasi", "")
-                ).strip(),
-            }
+            # Hasil Eskalasi
+            payload["entry.1035810770"] = str(
+                row.get("Hasil Eskalasi", "")
+            ).strip()
 
-            # =========================
-            # KETERANGAN TAMBAHAN
-            # =========================
-
+            # Keterangan Tambahan (opsional)
             if "Keterangan Tambahan" in df.columns:
 
                 ket = str(
                     row.get("Keterangan Tambahan", "")
                 ).strip()
 
-                if ket:
+                if ket and ket.lower() != "nan":
                     payload["entry.1789051105"] = ket
 
-            # =========================
-            # PICK UP TIME
-            # =========================
-
+            # ==========================
+            # Pick Up Time
+            # ==========================
             try:
 
-                pickup = row.get("Pick Up Time")
+                pickup = str(
+                    row.get("Pick Up Time", "")
+                ).strip()
 
-                if pd.notna(pickup):
+                if pickup:
 
-                    pickup = pd.to_datetime(
-                        str(pickup),
-                        errors="coerce"
-                    )
+                    h, m, s = pickup.split(":")
 
-                    if pd.notna(pickup):
+                    payload["entry.1083825887_hour"] = h
+                    payload["entry.1083825887_minute"] = m
+                    payload["entry.1083825887_second"] = s
 
-                        payload["entry.1083825887_hour"] = f"{pickup.hour:02d}"
-                        payload["entry.1083825887_minute"] = f"{pickup.minute:02d}"
-                        payload["entry.1083825887_second"] = f"{pickup.second:02d}"
+            except Exception:
+                pass
 
-            except Exception as e:
-                st.write(f"Pickup Time error: {e}")
-
-            # =========================
-            # CREATE TICKET DATE
-            # =========================
-
+            # ==========================
+            # Create Ticket Date
+            # ==========================
             try:
 
                 tanggal = pd.to_datetime(
-                    row.get("Create Ticket Date"),
-                    errors="coerce"
+                    row.get("Create Ticket Date")
                 )
 
-                if pd.notna(tanggal):
+                payload["entry.405968346_day"] = str(
+                    tanggal.day
+                )
 
-                    payload["entry.405968346_day"] = str(tanggal.day)
-                    payload["entry.405968346_month"] = str(tanggal.month)
-                    payload["entry.405968346_year"] = str(tanggal.year)
+                payload["entry.405968346_month"] = str(
+                    tanggal.month
+                )
 
-            except Exception as e:
-                st.write(f"Date error: {e}")
+                payload["entry.405968346_year"] = str(
+                    tanggal.year
+                )
 
-            # =========================
-            # CREATE TICKET TIME
-            # =========================
+            except Exception:
+                pass
+
+            # ==========================
+            # Create Ticket Time
+            # ==========================
+            try:
+
+                jam = str(
+                    row.get("Create Ticket Time", "")
+                ).strip()
+
+                if jam:
+
+                    h, m, s = jam.split(":")
+
+                    payload["entry.1785211983_hour"] = h
+                    payload["entry.1785211983_minute"] = m
+                    payload["entry.1785211983_second"] = s
+
+            except Exception:
+                pass
 
             try:
 
-                jam = row.get("Create Ticket Time")
-
-                if pd.notna(jam):
-
-                    jam = pd.to_datetime(
-                        str(jam),
-                        errors="coerce"
-                    )
-
-                    if pd.notna(jam):
-
-                        payload["entry.1785211983_hour"] = f"{jam.hour:02d}"
-                        payload["entry.1785211983_minute"] = f"{jam.minute:02d}"
-                        payload["entry.1785211983_second"] = f"{jam.second:02d}"
-
-            except Exception as e:
-                st.write(f"Time error: {e}")
-
-            try:
-
-                response = requests.post(
+                response = session.post(
                     FORM_URL,
                     data=payload,
                     headers={
-                        "User-Agent": "Mozilla/5.0"
+                        "User-Agent": "Mozilla/5.0",
+                        "Referer": "https://docs.google.com/forms/"
                     },
                     timeout=20,
                     allow_redirects=False
                 )
 
-                st.write(
-                    f"Baris {idx+1} | Status: {response.status_code}"
-                )
-
-                if response.status_code in [200, 302, 303]:
-
+                if response.status_code in [200, 302]:
                     sukses += 1
 
                 else:
 
                     st.error(
-                        f"Baris {idx+1} gagal"
+                        f"Baris {idx+1} gagal: {response.status_code}"
                     )
 
                     st.write("Payload:")
@@ -163,11 +153,15 @@ if file:
                     st.write("Response:")
                     st.text(response.text[:2000])
 
+                    break
+
             except Exception as e:
 
                 st.error(
                     f"Baris {idx+1} error: {e}"
                 )
+
+                break
 
             progress.progress(
                 (idx + 1) / len(df)
