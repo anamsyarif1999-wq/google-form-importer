@@ -6,15 +6,11 @@ import requests
 FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdJzVCp0QswGlQN_eWWT8zCbUq4tHcv4u9RfYEpjWE54vst1g/formResponse"
 
 FIELD_MAP = {
-    "Nama": "entry.756027671",
-    "ID TICKET": "entry.1901165043",
-    "SBU": "entry.143185955",
-    "Eskalasi Back Office": "entry.1818729194",
-    "Pick Up Time": "entry.1592591966",
-    "Create Ticket Date": "entry.995121463",
-    "Create Ticket Time": "entry.1672136407",
-    "Hasil Eskalasi": "entry.49705214",
-    "Keterangan Tambahan": "entry.679011578"
+    "Nama": "entry.1778972854",
+    "ID TICKET": "entry.1131610637",
+    "SBU": "entry.1847893431",
+    "Eskalasi Back Office": "entry.2054975984",
+    "Hasil Eskalasi": "entry.1035810770"
 }
 
 st.title("Excel ➜ Google Form Importer")
@@ -32,20 +28,19 @@ if file:
 
         for idx, (_, row) in enumerate(df.iterrows()):
             payload = {
-                FIELD_MAP["Nama"]: row.get("Nama",""),
-                FIELD_MAP["ID TICKET"]: row.get("ID TICKET",""),
-                FIELD_MAP["SBU"]: row.get("SBU",""),
-                FIELD_MAP["Eskalasi Back Office"]: row.get("Eskalasi Back Office",""),
-                FIELD_MAP["Pick Up Time"]: str(row.get("Pick Up Time","")),
-                FIELD_MAP["Create Ticket Date"]: str(row.get("Create Ticket Date","")),
-                FIELD_MAP["Create Ticket Time"]: str(row.get("Create Ticket Time","")),
-                FIELD_MAP["Hasil Eskalasi"]: row.get("Hasil Eskalasi",""),
-                FIELD_MAP["Keterangan Tambahan"]: row.get("Keterangan Tambahan","")
-            }
-
+    FIELD_MAP["Nama"]: row.get("Nama",""),
+    FIELD_MAP["ID TICKET"]: row.get("ID TICKET",""),
+    FIELD_MAP["SBU"]: row.get("SBU",""),
+    FIELD_MAP["Eskalasi Back Office"]: row.get("Eskalasi Back Office",""),
+    FIELD_MAP["Hasil Eskalasi"]: row.get("Hasil Eskalasi","")
+}
             try:
-                requests.post(FORM_URL, data=payload, timeout=20)
-                sukses += 1
+               r = requests.post(FORM_URL, data=payload, timeout=20)
+
+if r.status_code == 200:
+    sukses += 1
+else:
+    st.write("Gagal:", r.status_code)
             except:
                 pass
 
