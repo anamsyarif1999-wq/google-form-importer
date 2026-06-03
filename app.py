@@ -34,15 +34,16 @@ if file:
     FIELD_MAP["Eskalasi Back Office"]: row.get("Eskalasi Back Office",""),
     FIELD_MAP["Hasil Eskalasi"]: row.get("Hasil Eskalasi","")
 }
-            try:
-               r = requests.post(FORM_URL, data=payload, timeout=20)
+try:
+    r = requests.post(FORM_URL, data=payload, timeout=20)
 
-if r.status_code == 200:
-    sukses += 1
-else:
-    st.write("Gagal:", r.status_code)
-            except:
-                pass
+    if r.status_code == 200:
+        sukses += 1
+    else:
+        st.write("Gagal:", r.status_code)
+
+except Exception as e:
+    st.write(f"Error: {e}")
 
             progress.progress((idx + 1) / len(df))
 
