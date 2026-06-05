@@ -1,10 +1,21 @@
 import streamlit as st
 import pandas as pd
 import requests
+import time
 
+# URL Google Form
 FORM_URL = "https://docs.google.com/forms/u/0/d/e/1FAIpQLSdYY2hbRIhrCY_a06uH0keEsBBu8x6P3AzpZ2BmcmVERjaxpQ/formResponse"
 
 st.title("Excel ➜ Google Form Importer")
+
+# Setting delay
+delay = st.number_input(
+    "Jeda antar data (detik)",
+    min_value=0,
+    max_value=3600,
+    value=30,
+    step=1
+)
 
 file = st.file_uploader(
     "Upload Excel",
@@ -24,6 +35,8 @@ if file:
     if st.button("Kirim ke Google Form"):
 
         progress = st.progress(0)
+
+        status_box = st.empty()
 
         sukses = 0
 
@@ -47,7 +60,6 @@ if file:
                     row.get("SBU", "")
                 ).strip()
 
-                # ID TICKET
                 payload["entry.1802806380"] = str(
                     row.get("ID TICKET", "")
                 ).strip()
@@ -99,17 +111,9 @@ if file:
 
                         h, m, s = pickup.split(":")
 
-                        payload[
-                            "entry.141665543_hour"
-                        ] = h
-
-                        payload[
-                            "entry.141665543_minute"
-                        ] = m
-
-                        payload[
-                            "entry.141665543_second"
-                        ] = s
+                        payload["entry.141665543_hour"] = h
+                        payload["entry.141665543_minute"] = m
+                        payload["entry.141665543_second"] = s
 
                 except:
                     pass
@@ -126,17 +130,17 @@ if file:
                         )
                     )
 
-                    payload[
-                        "entry.1418866853_day"
-                    ] = str(tanggal.day)
+                    payload["entry.1418866853_day"] = str(
+                        tanggal.day
+                    )
 
-                    payload[
-                        "entry.1418866853_month"
-                    ] = str(tanggal.month)
+                    payload["entry.1418866853_month"] = str(
+                        tanggal.month
+                    )
 
-                    payload[
-                        "entry.1418866853_year"
-                    ] = str(tanggal.year)
+                    payload["entry.1418866853_year"] = str(
+                        tanggal.year
+                    )
 
                 except:
                     pass
@@ -158,17 +162,9 @@ if file:
 
                         h, m, s = jam.split(":")
 
-                        payload[
-                            "entry.2062984122_hour"
-                        ] = h
-
-                        payload[
-                            "entry.2062984122_minute"
-                        ] = m
-
-                        payload[
-                            "entry.2062984122_second"
-                        ] = s
+                        payload["entry.2062984122_hour"] = h
+                        payload["entry.2062984122_minute"] = m
+                        payload["entry.2062984122_second"] = s
 
                 except:
                     pass
@@ -177,19 +173,14 @@ if file:
                 # HIDDEN FIELD
                 # ==================
 
-                payload[
-                    "entry.822984039_sentinel"
-                ] = ""
-
-                payload[
-                    "entry.49503729_sentinel"
-                ] = ""
+                payload["entry.822984039_sentinel"] = ""
+                payload["entry.49503729_sentinel"] = ""
 
                 payload["fvv"] = "1"
                 payload["pageHistory"] = "0"
 
                 # ==================
-                # POST
+                # KIRIM DATA
                 # ==================
 
                 response = session.post(
@@ -207,21 +198,34 @@ if file:
                 )
 
                 if response.status_code == 200:
-                    sukses += 1
-                else:
 
-                    st.error(
-                        f"Baris {idx+1} gagal ({response.status_code})"
+                    sukses += 1
+
+                    status_box.success(
+                        f"Data {idx+1}/{len(df)} berhasil dikirim | ID Ticket: {row.get('ID TICKET','')}"
                     )
 
-                    st.write("Payload:")
-                    st.json(payload)
+                else:
 
-                    break
+                    status_box.error(
+                        f"Baris {idx+1} gagal ({response.status_code})"
+                    )
 
                 progress.progress(
                     (idx + 1) / len(df)
                 )
+
+                # ==================
+                # DELAY
+                # ==================
+
+                if idx < len(df) - 1 and delay > 0:
+
+                    status_box.info(
+                        f"Menunggu {delay} detik sebelum data berikutnya..."
+                    )
+
+                    time.sleep(delay)
 
             except Exception as e:
 
@@ -229,8 +233,6 @@ if file:
                     f"Baris {idx+1} error: {e}"
                 )
 
-                break
-
         st.success(
-            f"Selesai. Berhasil memproses {sukses} dari {len(df)} data."
+            f"Selesai. Berhasil mengirim {sukses} dari {len(df)} data."
         )
