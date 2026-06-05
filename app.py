@@ -169,4 +169,4 @@ if file:
 
         st.success(
             f"Selesai. Berhasil memproses {sukses} data."
-        
+        )
