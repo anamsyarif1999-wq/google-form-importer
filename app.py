@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import requests
-import json
 
 FORM_URL = "https://docs.google.com/forms/u/0/d/e/1FAIpQLSdYY2hbRIhrCY_a06uH0keEsBBu8x6P3AzpZ2BmcmVERjaxpQ/formResponse"
 
@@ -18,7 +17,9 @@ if file:
 
     st.dataframe(df.head())
 
-    st.write(f"Total data: {len(df)}")
+    st.write(
+        f"Total data: {len(df)}"
+    )
 
     if st.button("Kirim ke Google Form"):
 
@@ -35,7 +36,7 @@ if file:
                 payload = {}
 
                 # ==================
-                # TEXT FIELD
+                # FIELD TEXT
                 # ==================
 
                 payload["entry.154565194"] = str(
@@ -46,7 +47,8 @@ if file:
                     row.get("SBU", "")
                 ).strip()
 
-                payload["entry.1082086380"] = str(
+                # ID TICKET
+                payload["entry.1802806380"] = str(
                     row.get("ID TICKET", "")
                 ).strip()
 
@@ -60,12 +62,12 @@ if file:
                 payload["entry.49503729"] = str(
                     row.get(
                         "Hasil Eskalasi",
-                        "No respon"
+                        ""
                     )
                 ).strip()
 
                 # ==================
-                # KETERANGAN
+                # KETERANGAN TAMBAHAN
                 # ==================
 
                 ket = str(
@@ -78,83 +80,98 @@ if file:
                 if ket.lower() == "nan":
                     ket = "-"
 
-                payload["entry.546067612"] = ket
+                payload["entry.564067612"] = ket
 
                 # ==================
                 # PICK UP TIME
                 # ==================
 
-                pickup = str(
-                    row.get(
-                        "Pick Up Time",
-                        ""
-                    )
-                ).strip()
+                try:
 
-                if pickup:
+                    pickup = str(
+                        row.get(
+                            "Pick Up Time",
+                            ""
+                        )
+                    ).strip()
 
-                    h, m, s = pickup.split(":")
+                    if pickup and ":" in pickup:
 
-                    payload[
-                        "entry.141665543_hour"
-                    ] = h
+                        h, m, s = pickup.split(":")
 
-                    payload[
-                        "entry.141665543_minute"
-                    ] = m
+                        payload[
+                            "entry.141665543_hour"
+                        ] = h
 
-                    payload[
-                        "entry.141665543_second"
-                    ] = s
+                        payload[
+                            "entry.141665543_minute"
+                        ] = m
+
+                        payload[
+                            "entry.141665543_second"
+                        ] = s
+
+                except:
+                    pass
 
                 # ==================
                 # CREATE TICKET DATE
                 # ==================
 
-                tanggal = pd.to_datetime(
-                    row.get(
-                        "Create Ticket Date"
+                try:
+
+                    tanggal = pd.to_datetime(
+                        row.get(
+                            "Create Ticket Date"
+                        )
                     )
-                )
 
-                payload[
-                    "entry.1418866853_day"
-                ] = str(tanggal.day)
+                    payload[
+                        "entry.1418866853_day"
+                    ] = str(tanggal.day)
 
-                payload[
-                    "entry.1418866853_month"
-                ] = str(tanggal.month)
+                    payload[
+                        "entry.1418866853_month"
+                    ] = str(tanggal.month)
 
-                payload[
-                    "entry.1418866853_year"
-                ] = str(tanggal.year)
+                    payload[
+                        "entry.1418866853_year"
+                    ] = str(tanggal.year)
+
+                except:
+                    pass
 
                 # ==================
                 # CREATE TICKET TIME
                 # ==================
 
-                jam = str(
-                    row.get(
-                        "Create Ticket Time",
-                        ""
-                    )
-                ).strip()
+                try:
 
-                if jam:
+                    jam = str(
+                        row.get(
+                            "Create Ticket Time",
+                            ""
+                        )
+                    ).strip()
 
-                    h, m, s = jam.split(":")
+                    if jam and ":" in jam:
 
-                    payload[
-                        "entry.2062984122_hour"
-                    ] = h
+                        h, m, s = jam.split(":")
 
-                    payload[
-                        "entry.2062984122_minute"
-                    ] = m
+                        payload[
+                            "entry.2062984122_hour"
+                        ] = h
 
-                    payload[
-                        "entry.2062984122_second"
-                    ] = s
+                        payload[
+                            "entry.2062984122_minute"
+                        ] = m
+
+                        payload[
+                            "entry.2062984122_second"
+                        ] = s
+
+                except:
+                    pass
 
                 # ==================
                 # HIDDEN FIELD
@@ -171,28 +188,16 @@ if file:
                 payload["fvv"] = "1"
                 payload["pageHistory"] = "0"
 
-                # fbzx random
-                payload["fbzx"] = str(
-                    abs(hash(str(idx)))
-                )
-
                 # ==================
-                # DEBUG
+                # POST
                 # ==================
-
-                st.write(
-                    f"Payload Baris {idx+1}"
-                )
-
-                st.json(payload)
 
                 response = session.post(
                     FORM_URL,
                     data=payload,
                     headers={
                         "User-Agent": "Mozilla/5.0",
-                        "Referer":
-                        FORM_URL.replace(
+                        "Referer": FORM_URL.replace(
                             "formResponse",
                             "viewform"
                         )
@@ -201,24 +206,18 @@ if file:
                     allow_redirects=True
                 )
 
-                st.write(
-                    "Status:",
-                    response.status_code
-                )
-
                 if response.status_code == 200:
-
                     sukses += 1
-
                 else:
 
                     st.error(
                         f"Baris {idx+1} gagal ({response.status_code})"
                     )
 
-                    st.text(
-                        response.text[:1000]
-                    )
+                    st.write("Payload:")
+                    st.json(payload)
+
+                    break
 
                 progress.progress(
                     (idx + 1) / len(df)
@@ -229,6 +228,8 @@ if file:
                 st.error(
                     f"Baris {idx+1} error: {e}"
                 )
+
+                break
 
         st.success(
             f"Selesai. Berhasil memproses {sukses} dari {len(df)} data."
