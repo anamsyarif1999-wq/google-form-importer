@@ -3,7 +3,7 @@ import pandas as pd
 import requests
 
 # GANTI DENGAN URL FORMRESPONSE FORM BARU
-FORM_URL = "https://docs.google.com/forms/d/1_ZpgRF-hLw7Q2UYtsQUhC6NHiTdO3mVsoAWBxRODrgw/viewform?edit_requested=true"
+FORM_URL = "https://docs.google.com/forms/u/0/d/e/1FAIpQLSdYY2hbRIhrCY_a06uH0keEsBBu8x6P3AzpZ2BmcmVERjaxpQ/formResponse"
 
 st.title("Excel ➜ Google Form Importer")
 
