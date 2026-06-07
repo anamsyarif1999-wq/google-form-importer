@@ -1,4 +1,3 @@
-```python
 import streamlit as st
 import pandas as pd
 import requests
@@ -299,4 +298,3 @@ Gagal : {gagal}
 Total : {len(df)}
 """
         )
-```
