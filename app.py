@@ -2,7 +2,10 @@ import streamlit as st
 import pandas as pd
 import requests
 import time
+import traceback
+
 from datetime import datetime
+from datetime import time as dt_time
 
 # =====================================================
 # GOOGLE FORM
@@ -11,7 +14,7 @@ from datetime import datetime
 FORM_URL = "https://docs.google.com/forms/u/0/d/e/1FAIpQLSdYY2hbRIhrCY_a06uH0keEsBBu8x6P3AzpZ2BmcmVERjaxpQ/formResponse"
 
 # =====================================================
-# FUNGSI
+# HELPER
 # =====================================================
 
 def clean_value(val):
@@ -23,12 +26,13 @@ def clean_value(val):
 
 
 def parse_time_excel(value):
-
     """
     Support:
-    13:09:09
-    1900-01-19 13:09:09
+    23:59:59
+    23:59:59.106000
+    1900-09-30 23:59:59.106000
     datetime
+    datetime.time
     """
 
     if pd.isna(value):
@@ -36,19 +40,30 @@ def parse_time_excel(value):
 
     try:
 
+        if isinstance(value, dt_time):
+            return value.strftime("%H:%M:%S")
+
         if isinstance(value, datetime):
             return value.strftime("%H:%M:%S")
 
         value = str(value).strip()
 
+        if value == "":
+            return None
+
+        # jika ada tanggal
         if " " in value:
             value = value.split(" ")[-1]
 
-        datetime.strptime(value, "%H:%M:%S")
+        # hapus milidetik
+        if "." in value:
+            value = value.split(".")[0]
 
-        return value
+        dt = pd.to_datetime(value)
 
-    except:
+        return dt.strftime("%H:%M:%S")
+
+    except Exception:
         return None
 
 
@@ -57,7 +72,7 @@ def build_payload(row):
     payload = {}
 
     # ==========================================
-    # TEXT FIELD
+    # TEXT
     # ==========================================
 
     payload["entry.154565194"] = clean_value(
@@ -113,7 +128,8 @@ def build_payload(row):
     try:
 
         tanggal = pd.to_datetime(
-            row.get("Create Ticket Date")
+            row.get("Create Ticket Date"),
+            dayfirst=True
         )
 
         payload["entry.1418866853_day"] = str(
@@ -128,7 +144,7 @@ def build_payload(row):
             tanggal.year
         )
 
-    except:
+    except Exception:
         pass
 
     # ==========================================
@@ -153,6 +169,11 @@ def build_payload(row):
 # =====================================================
 # UI
 # =====================================================
+
+st.set_page_config(
+    page_title="Excel ➜ Google Form Importer",
+    layout="wide"
+)
 
 st.title("Excel ➜ Google Form Importer")
 
@@ -197,6 +218,7 @@ if file:
         progress = st.progress(0)
 
         status_box = st.empty()
+
         countdown_box = st.empty()
 
         sukses = 0
@@ -213,7 +235,11 @@ if file:
 
                 payload = build_payload(row)
 
-                if payload["entry.154565194"] == "":
+                # validasi nama
+                if payload.get(
+                    "entry.154565194",
+                    ""
+                ) == "":
 
                     gagal += 1
 
@@ -234,31 +260,37 @@ if file:
                     timeout=30
                 )
 
-                if response.status_code == 200:
+                if response.status_code in [200, 302]:
 
                     sukses += 1
 
                     status_box.success(
                         f"✓ Baris {nomor} berhasil "
-                        f"({payload['entry.1802806380']})"
+                        f"({payload.get('entry.1802806380','-')})"
                     )
 
                 else:
 
                     gagal += 1
 
-                    status_box.error(
-                        f"✗ Baris {nomor} gagal "
-                        f"({response.status_code})"
+                    st.error(
+                        f"""
+Baris {nomor} gagal
+
+Status Code:
+{response.status_code}
+
+Payload:
+{payload}
+
+Response:
+{response.text[:500]}
+"""
                     )
 
                 progress.progress(
                     nomor / len(df)
                 )
-
-                # =====================
-                # DELAY
-                # =====================
 
                 if nomor < len(df):
 
@@ -271,8 +303,7 @@ if file:
                         countdown_box.info(
                             f"Menunggu "
                             f"{sisa} detik "
-                            f"sebelum kirim "
-                            f"data berikutnya..."
+                            f"sebelum kirim data berikutnya..."
                         )
 
                         time.sleep(1)
@@ -283,8 +314,17 @@ if file:
 
                 gagal += 1
 
-                status_box.error(
-                    f"Baris {nomor} error: {e}"
+                st.error(
+                    f"""
+Baris {nomor} ERROR
+
+{str(e)}
+
+{traceback.format_exc()}
+
+Data:
+{row.to_dict()}
+"""
                 )
 
         st.success(
