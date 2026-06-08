@@ -14,6 +14,16 @@ from datetime import time as dt_time
 FORM_URL = "https://docs.google.com/forms/u/0/d/e/1FAIpQLSdYY2hbRIhrCY_a06uH0keEsBBu8x6P3AzpZ2BmcmVERjaxpQ/formResponse"
 
 # =====================================================
+# SESSION STATE
+# =====================================================
+
+if "last_success" not in st.session_state:
+    st.session_state.last_success = 0
+
+if "running" not in st.session_state:
+    st.session_state.running = False
+
+# =====================================================
 # HELPER
 # =====================================================
 
@@ -51,11 +61,9 @@ def parse_time_excel(value):
         if value == "":
             return None
 
-        # jika ada tanggal
         if " " in value:
             value = value.split(" ")[-1]
 
-        # hapus milidetik
         if "." in value:
             value = value.split(".")[0]
 
@@ -63,17 +71,13 @@ def parse_time_excel(value):
 
         return dt.strftime("%H:%M:%S")
 
-    except Exception:
+    except:
         return None
 
 
 def build_payload(row):
 
     payload = {}
-
-    # ==========================================
-    # TEXT
-    # ==========================================
 
     payload["entry.154565194"] = clean_value(
         row.get("Nama")
@@ -94,20 +98,18 @@ def build_payload(row):
     payload["entry.49503729"] = (
         clean_value(
             row.get("Hasil Eskalasi")
-        )
-        or "No respon"
+        ) or "No respon"
     )
 
     payload["entry.564067612"] = (
         clean_value(
             row.get("Keterangan Tambahan")
-        )
-        or "-"
+        ) or "-"
     )
 
-    # ==========================================
+    # ====================================
     # PICK UP TIME
-    # ==========================================
+    # ====================================
 
     pickup = parse_time_excel(
         row.get("Pick Up Time")
@@ -121,9 +123,9 @@ def build_payload(row):
         payload["entry.141665543_minute"] = m
         payload["entry.141665543_second"] = s
 
-    # ==========================================
-    # CREATE TICKET DATE
-    # ==========================================
+    # ====================================
+    # CREATE DATE
+    # ====================================
 
     try:
 
@@ -144,12 +146,12 @@ def build_payload(row):
             tanggal.year
         )
 
-    except Exception:
+    except:
         pass
 
-    # ==========================================
-    # CREATE TICKET TIME
-    # ==========================================
+    # ====================================
+    # CREATE TIME
+    # ====================================
 
     create_time = parse_time_excel(
         row.get("Create Ticket Time")
@@ -190,11 +192,33 @@ file = st.file_uploader(
     type=["xlsx"]
 )
 
+col1, col2 = st.columns(2)
+
+with col1:
+
+    if st.button("Reset Progress"):
+
+        st.session_state.last_success = 0
+
+        st.success(
+            "Progress berhasil direset."
+        )
+
+with col2:
+
+    st.info(
+        f"Baris terakhir berhasil: "
+        f"{st.session_state.last_success}"
+    )
+
+# =====================================================
+# LOAD FILE
+# =====================================================
+
 if file:
 
     df = pd.read_excel(file)
 
-    # hapus baris kosong
     df = df.dropna(how="all")
 
     st.dataframe(df.head())
@@ -203,14 +227,18 @@ if file:
         f"Total data: {len(df)}"
     )
 
-    estimasi = len(df) * delay
+    estimasi = (
+        (len(df) - st.session_state.last_success)
+        * delay
+    )
 
     menit = estimasi // 60
     detik = estimasi % 60
 
     st.info(
-        f"Estimasi waktu proses: "
-        f"{menit} menit {detik} detik"
+        f"Estimasi sisa proses: "
+        f"{menit} menit "
+        f"{detik} detik"
     )
 
     if st.button("Kirim ke Google Form"):
@@ -221,21 +249,26 @@ if file:
 
         countdown_box = st.empty()
 
+        log_box = st.empty()
+
         sukses = 0
         gagal = 0
 
         session = requests.Session()
 
-        for nomor, (_, row) in enumerate(
-            df.iterrows(),
-            start=1
+        start_row = st.session_state.last_success
+
+        for nomor in range(
+            start_row,
+            len(df)
         ):
+
+            row = df.iloc[nomor]
 
             try:
 
                 payload = build_payload(row)
 
-                # validasi nama
                 if payload.get(
                     "entry.154565194",
                     ""
@@ -244,28 +277,45 @@ if file:
                     gagal += 1
 
                     status_box.warning(
-                        f"Baris {nomor} dilewati "
+                        f"Baris {nomor+1} dilewati "
                         f"(Nama kosong)"
                     )
 
                     continue
 
-                response = session.post(
-                    FORM_URL,
-                    data=payload,
-                    headers={
-                        "User-Agent":
-                        "Mozilla/5.0"
-                    },
-                    timeout=30
-                )
+                berhasil = False
 
-                if response.status_code in [200, 302]:
+                for retry in range(3):
+
+                    try:
+
+                        response = session.post(
+                            FORM_URL,
+                            data=payload,
+                            headers={
+                                "User-Agent":
+                                "Mozilla/5.0"
+                            },
+                            timeout=60
+                        )
+
+                        if response.status_code in [200, 302]:
+
+                            berhasil = True
+                            break
+
+                    except Exception:
+
+                        time.sleep(5)
+
+                if berhasil:
 
                     sukses += 1
 
+                    st.session_state.last_success = nomor + 1
+
                     status_box.success(
-                        f"✓ Baris {nomor} berhasil "
+                        f"✓ Baris {nomor+1} berhasil "
                         f"({payload.get('entry.1802806380','-')})"
                     )
 
@@ -273,26 +323,32 @@ if file:
 
                     gagal += 1
 
-                    st.error(
-                        f"""
-Baris {nomor} gagal
-
-Status Code:
-{response.status_code}
-
-Payload:
-{payload}
-
-Response:
-{response.text[:500]}
-"""
+                    status_box.error(
+                        f"✗ Baris {nomor+1} gagal "
+                        f"setelah 3x retry"
                     )
 
                 progress.progress(
-                    nomor / len(df)
+                    (nomor + 1) / len(df)
                 )
 
-                if nomor < len(df):
+                log_box.info(
+                    f"""
+Progress:
+{nomor+1}/{len(df)}
+
+Berhasil:
+{sukses}
+
+Gagal:
+{gagal}
+
+Last Success:
+{st.session_state.last_success}
+"""
+                )
+
+                if nomor < len(df) - 1:
 
                     for sisa in range(
                         delay,
@@ -302,8 +358,7 @@ Response:
 
                         countdown_box.info(
                             f"Menunggu "
-                            f"{sisa} detik "
-                            f"sebelum kirim data berikutnya..."
+                            f"{sisa} detik..."
                         )
 
                         time.sleep(1)
@@ -316,25 +371,25 @@ Response:
 
                 st.error(
                     f"""
-Baris {nomor} ERROR
+Baris {nomor+1} ERROR
 
 {str(e)}
 
 {traceback.format_exc()}
-
-Data:
-{row.to_dict()}
 """
                 )
 
         st.success(
             f"""
-Selesai
+SELESAI
 
 Berhasil : {sukses}
 
 Gagal : {gagal}
 
 Total : {len(df)}
+
+Progress tersimpan :
+{st.session_state.last_success}
 """
         )
