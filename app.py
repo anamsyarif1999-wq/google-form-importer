@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 import time
+import random
 import traceback
 
 from datetime import datetime
@@ -19,9 +20,6 @@ FORM_URL = "https://docs.google.com/forms/u/0/d/e/1FAIpQLSdYY2hbRIhrCY_a06uH0keE
 
 if "last_success" not in st.session_state:
     st.session_state.last_success = 0
-
-if "running" not in st.session_state:
-    st.session_state.running = False
 
 # =====================================================
 # HELPER
@@ -179,12 +177,17 @@ st.set_page_config(
 
 st.title("Excel ➜ Google Form Importer")
 
-delay = st.slider(
-    "Jeda antar data (detik)",
+max_delay = st.slider(
+    "Jeda Maksimum Antar Data (detik)",
     min_value=1,
     max_value=30,
-    value=10,
+    value=20,
     step=1
+)
+
+st.caption(
+    f"Jeda akan diacak otomatis antara "
+    f"{max(3,max_delay//3)} - {max_delay} detik"
 )
 
 file = st.file_uploader(
@@ -201,13 +204,13 @@ with col1:
         st.session_state.last_success = 0
 
         st.success(
-            "Progress berhasil direset."
+            "Progress berhasil direset"
         )
 
 with col2:
 
     st.info(
-        f"Baris terakhir berhasil: "
+        f"Baris terakhir berhasil : "
         f"{st.session_state.last_success}"
     )
 
@@ -224,21 +227,25 @@ if file:
     st.dataframe(df.head())
 
     st.write(
-        f"Total data: {len(df)}"
+        f"Total data : {len(df)}"
     )
 
-    estimasi = (
+    avg_delay = (
+        max(3, max_delay // 3)
+        + max_delay
+    ) / 2
+
+    estimasi = int(
         (len(df) - st.session_state.last_success)
-        * delay
+        * avg_delay
     )
 
     menit = estimasi // 60
     detik = estimasi % 60
 
     st.info(
-        f"Estimasi sisa proses: "
-        f"{menit} menit "
-        f"{detik} detik"
+        f"Estimasi waktu proses : "
+        f"{menit} menit {detik} detik"
     )
 
     if st.button("Kirim ke Google Form"):
@@ -276,11 +283,6 @@ if file:
 
                     gagal += 1
 
-                    status_box.warning(
-                        f"Baris {nomor+1} dilewati "
-                        f"(Nama kosong)"
-                    )
-
                     continue
 
                 berhasil = False
@@ -294,7 +296,12 @@ if file:
                             data=payload,
                             headers={
                                 "User-Agent":
-                                "Mozilla/5.0"
+                                "Mozilla/5.0",
+                                "Referer":
+                                FORM_URL.replace(
+                                    "formResponse",
+                                    "viewform"
+                                )
                             },
                             timeout=60
                         )
@@ -304,7 +311,7 @@ if file:
                             berhasil = True
                             break
 
-                    except Exception:
+                    except:
 
                         time.sleep(5)
 
@@ -312,7 +319,9 @@ if file:
 
                     sukses += 1
 
-                    st.session_state.last_success = nomor + 1
+                    st.session_state.last_success = (
+                        nomor + 1
+                    )
 
                     status_box.success(
                         f"✓ Baris {nomor+1} berhasil "
@@ -324,41 +333,55 @@ if file:
                     gagal += 1
 
                     status_box.error(
-                        f"✗ Baris {nomor+1} gagal "
-                        f"setelah 3x retry"
+                        f"✗ Baris {nomor+1} gagal"
                     )
 
                 progress.progress(
-                    (nomor + 1) / len(df)
+                    (nomor + 1)
+                    / len(df)
                 )
 
                 log_box.info(
                     f"""
-Progress:
-{nomor+1}/{len(df)}
+Progress : {nomor+1}/{len(df)}
 
-Berhasil:
-{sukses}
+Berhasil : {sukses}
 
-Gagal:
-{gagal}
+Gagal : {gagal}
 
-Last Success:
+Last Success :
 {st.session_state.last_success}
 """
                 )
 
+                # ==================================
+                # RANDOM DELAY
+                # ==================================
+
                 if nomor < len(df) - 1:
 
+                    random_delay = random.randint(
+                        max(3, max_delay // 3),
+                        max_delay
+                    )
+
                     for sisa in range(
-                        delay,
+                        random_delay,
                         0,
                         -1
                     ):
 
                         countdown_box.info(
-                            f"Menunggu "
-                            f"{sisa} detik..."
+                            f"""
+Jeda Acak :
+{random_delay} detik
+
+Data ke-{nomor+1}
+berhasil dikirim
+
+Menunggu :
+{sisa} detik
+"""
                         )
 
                         time.sleep(1)
