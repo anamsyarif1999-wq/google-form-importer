@@ -283,14 +283,15 @@ if file:
 
                     try:
 
+                        st.write("PAYLOAD")
+                        st.json(payload)
+
                         response = session.post(
                             FORM_URL,
                             data=payload,
                             headers={
-                                "User-Agent":
-                                "Mozilla/5.0",
-                                "Referer":
-                                FORM_URL.replace(
+                                "User-Agent": "Mozilla/5.0",
+                                "Referer": FORM_URL.replace(
                                     "formResponse",
                                     "viewform"
                                 )
@@ -298,8 +299,16 @@ if file:
                             timeout=60
                         )
 
-                        if response.status_code in [200, 302]:
+                        st.write(
+                            "STATUS:",
+                            response.status_code
+                        )
 
+                        st.text(
+                            response.text[:500]
+                        )
+
+                        if response.status_code in [200,302]:
                             berhasil = True
                             break
 
