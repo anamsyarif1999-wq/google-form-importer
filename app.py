@@ -5,7 +5,7 @@ import time
 import random
 import traceback
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from datetime import time as dt_time
 
 # =====================================================
@@ -106,16 +106,13 @@ def build_payload(row):
     )
 
     # ====================================
-    # PICK UP TIME OTOMATIS
+    # PICK UP TIME
     # ====================================
+    # Tidak dikirim ke Google Form
+    # Akan dihitung otomatis dari Timestamp
+    # pada Google Sheet
 
-    pickup_time = datetime.now() - timedelta(
-        seconds=random.randint(10, 180)
-    )
-
-    payload["entry.141665543_hour"] = pickup_time.strftime("%H")
-    payload["entry.141665543_minute"] = pickup_time.strftime("%M")
-    payload["entry.141665543_second"] = pickup_time.strftime("%S")
+    pass
 
     # ====================================
     # CREATE DATE
