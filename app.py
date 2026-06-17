@@ -5,8 +5,7 @@ import time
 import random
 import traceback
 
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from datetime import time as dt_time
 
 # =====================================================
@@ -35,6 +34,14 @@ def clean_value(val):
 
 
 def parse_time_excel(value):
+    """
+    Support:
+    23:59:59
+    23:59:59.106000
+    1900-09-30 23:59:59.106000
+    datetime
+    datetime.time
+    """
 
     if pd.isna(value):
         return None
@@ -66,33 +73,7 @@ def parse_time_excel(value):
         return None
 
 
-def generate_pickup_time(create_time, delay_minutes):
-
-    try:
-
-        dt = datetime.strptime(
-            create_time,
-            "%H:%M:%S"
-        )
-
-        pickup = dt - timedelta(
-            minutes=delay_minutes
-        )
-
-        return pickup.strftime("%H:%M:%S")
-
-    except:
-        return None
-
-
-def build_payload(
-    row,
-    pickup_mode,
-    delay_mode,
-    fixed_delay,
-    min_delay,
-    max_delay
-):
+def build_payload(row):
 
     payload = {}
 
@@ -124,53 +105,21 @@ def build_payload(
         ) or "-"
     )
 
-    # =================================================
-    # PICKUP TIME
-    # =================================================
+    # ====================================
+    # PICK UP TIME OTOMATIS
+    # ====================================
 
-    pickup = None
+    pickup_time = datetime.now() - timedelta(
+        seconds=random.randint(10, 180)
+    )
 
-    if pickup_mode == "Generate Otomatis":
+    payload["entry.141665543_hour"] = pickup_time.strftime("%H")
+    payload["entry.141665543_minute"] = pickup_time.strftime("%M")
+    payload["entry.141665543_second"] = pickup_time.strftime("%S")
 
-        create_time = parse_time_excel(
-            row.get("Create Ticket Time")
-        )
-
-        if create_time:
-
-            if delay_mode == "Tetap":
-
-                delay = fixed_delay
-
-            else:
-
-                delay = random.randint(
-                    min_delay,
-                    max_delay
-                )
-
-            pickup = generate_pickup_time(
-                create_time,
-                delay
-            )
-
-    else:
-
-        pickup = parse_time_excel(
-            row.get("Pick Up Time")
-        )
-
-    if pickup:
-
-        h, m, s = pickup.split(":")
-
-        payload["entry.141665543_hour"] = h
-        payload["entry.141665543_minute"] = m
-        payload["entry.141665543_second"] = s
-
-    # =================================================
+    # ====================================
     # CREATE DATE
-    # =================================================
+    # ====================================
 
     try:
 
@@ -194,9 +143,9 @@ def build_payload(
     except:
         pass
 
-    # =================================================
+    # ====================================
     # CREATE TIME
-    # =================================================
+    # ====================================
 
     create_time = parse_time_excel(
         row.get("Create Ticket Time")
@@ -224,68 +173,17 @@ st.set_page_config(
 
 st.title("Excel ➜ Google Form Importer")
 
-# =====================================================
-# PICKUP SETTING
-# =====================================================
-
-st.subheader("Pengaturan Pick Up Time")
-
-pickup_mode = st.radio(
-    "Mode Pick Up Time",
-    [
-        "Gunakan dari Excel",
-        "Generate Otomatis"
-    ]
+max_delay = st.slider(
+    "Jeda Maksimum Antar Data (detik)",
+    min_value=1,
+    max_value=30,
+    value=20,
+    step=1
 )
 
-delay_mode = "Tetap"
-fixed_delay = 1
-min_delay = 1
-max_delay = 3
-
-if pickup_mode == "Generate Otomatis":
-
-    delay_mode = st.radio(
-        "Jenis Jeda",
-        [
-            "Tetap",
-            "Acak"
-        ]
-    )
-
-    if delay_mode == "Tetap":
-
-        fixed_delay = st.selectbox(
-            "Kurangi Berapa Menit",
-            [1, 2, 3],
-            index=0
-        )
-
-    else:
-
-        min_delay = st.number_input(
-            "Jeda Minimum",
-            min_value=1,
-            max_value=10,
-            value=1
-        )
-
-        max_delay = st.number_input(
-            "Jeda Maksimum",
-            min_value=min_delay,
-            max_value=10,
-            value=3
-        )
-
-# =====================================================
-# DELAY ANTAR REQUEST
-# =====================================================
-
-max_delay_request = st.slider(
-    "Jeda Maksimum Antar Data (detik)",
-    1,
-    30,
-    20
+st.caption(
+    f"Jeda akan diacak otomatis antara "
+    f"10 - {max_delay} detik"
 )
 
 file = st.file_uploader(
@@ -301,7 +199,9 @@ with col1:
 
         st.session_state.last_success = 0
 
-        st.success("Progress direset")
+        st.success(
+            "Progress berhasil direset"
+        )
 
 with col2:
 
@@ -320,57 +220,27 @@ if file:
 
     df = df.dropna(how="all")
 
-    # =============================================
-    # PREVIEW PICKUP
-    # =============================================
-
-    preview_df = df.copy()
-
-    if (
-        pickup_mode == "Generate Otomatis"
-        and "Create Ticket Time" in preview_df.columns
-    ):
-
-        preview_pickup = []
-
-        for _, row in preview_df.iterrows():
-
-            create_time = parse_time_excel(
-                row.get("Create Ticket Time")
-            )
-
-            if create_time:
-
-                if delay_mode == "Tetap":
-
-                    delay = fixed_delay
-
-                else:
-
-                    delay = random.randint(
-                        min_delay,
-                        max_delay
-                    )
-
-                preview_pickup.append(
-                    generate_pickup_time(
-                        create_time,
-                        delay
-                    )
-                )
-
-            else:
-
-                preview_pickup.append("")
-
-        preview_df[
-            "Preview Pick Up Time"
-        ] = preview_pickup
-
-    st.dataframe(preview_df.head(20))
+    st.dataframe(df.head())
 
     st.write(
         f"Total data : {len(df)}"
+    )
+
+    avg_delay = (
+        10 + max_delay
+    ) / 2
+
+    estimasi = int(
+        (len(df) - st.session_state.last_success)
+        * avg_delay
+    )
+
+    menit = estimasi // 60
+    detik = estimasi % 60
+
+    st.info(
+        f"Estimasi waktu proses : "
+        f"{menit} menit {detik} detik"
     )
 
     if st.button("Kirim ke Google Form"):
@@ -378,6 +248,10 @@ if file:
         progress = st.progress(0)
 
         status_box = st.empty()
+
+        countdown_box = st.empty()
+
+        log_box = st.empty()
 
         sukses = 0
         gagal = 0
@@ -395,26 +269,48 @@ if file:
 
             try:
 
-                payload = build_payload(
-                    row,
-                    pickup_mode,
-                    delay_mode,
-                    fixed_delay,
-                    min_delay,
-                    max_delay
-                )
+                payload = build_payload(row)
 
-                response = session.post(
-                    FORM_URL,
-                    data=payload,
-                    headers={
-                        "User-Agent":
-                        "Mozilla/5.0"
-                    },
-                    timeout=60
-                )
+                if payload.get(
+                    "entry.154565194",
+                    ""
+                ) == "":
 
-                if response.status_code in [200, 302]:
+                    gagal += 1
+
+                    continue
+
+                berhasil = False
+
+                for retry in range(3):
+
+                    try:
+
+                        response = session.post(
+                            FORM_URL,
+                            data=payload,
+                            headers={
+                                "User-Agent":
+                                "Mozilla/5.0",
+                                "Referer":
+                                FORM_URL.replace(
+                                    "formResponse",
+                                    "viewform"
+                                )
+                            },
+                            timeout=60
+                        )
+
+                        if response.status_code in [200, 302]:
+
+                            berhasil = True
+                            break
+
+                    except:
+
+                        time.sleep(5)
+
+                if berhasil:
 
                     sukses += 1
 
@@ -423,7 +319,8 @@ if file:
                     )
 
                     status_box.success(
-                        f"✓ Baris {nomor+1} berhasil"
+                        f"✓ Baris {nomor+1} berhasil "
+                        f"({payload.get('entry.1802806380','-')})"
                     )
 
                 else:
@@ -439,19 +336,52 @@ if file:
                     / len(df)
                 )
 
+                log_box.info(
+                    f"""
+Progress : {nomor+1}/{len(df)}
+
+Berhasil : {sukses}
+
+Gagal : {gagal}
+
+Last Success :
+{st.session_state.last_success}
+"""
+                )
+
+                # ==================================
+                # RANDOM DELAY
+                # ==================================
+
                 if nomor < len(df) - 1:
 
-                    delay_request = random.randint(
-                        max(
-                            3,
-                            max_delay_request // 3
-                        ),
-                        max_delay_request
+                    random_delay = random.randint(
+                        10,
+                        max_delay
                     )
 
-                    time.sleep(
-                        delay_request
-                    )
+                    for sisa in range(
+                        random_delay,
+                        0,
+                        -1
+                    ):
+
+                        countdown_box.info(
+                            f"""
+Jeda Acak :
+{random_delay} detik
+
+Data ke-{nomor+1}
+berhasil dikirim
+
+Menunggu :
+{sisa} detik
+"""
+                        )
+
+                        time.sleep(1)
+
+                    countdown_box.empty()
 
             except Exception as e:
 
@@ -472,7 +402,12 @@ Baris {nomor+1} ERROR
 SELESAI
 
 Berhasil : {sukses}
+
 Gagal : {gagal}
+
 Total : {len(df)}
+
+Progress tersimpan :
+{st.session_state.last_success}
 """
         )
