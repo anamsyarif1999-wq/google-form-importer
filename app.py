@@ -172,7 +172,7 @@ st.title("Excel ➜ Google Form Importer")
 
 max_delay = st.slider(
     "Jeda Maksimum Antar Data (detik)",
-    min_value=1,
+    min_value=10,
     max_value=30,
     value=20,
     step=1
