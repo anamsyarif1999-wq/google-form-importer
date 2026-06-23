@@ -375,9 +375,7 @@ if file:
             )
 
             if ok:
-
-                global last_submit_time
-            
+                
                 last_submit_time = datetime.now(
                     ZoneInfo("Asia/Jakarta")
                 )
