@@ -12,7 +12,6 @@ from zoneinfo import ZoneInfo
 # =====================================================
 # CONFIG
 # =====================================================
-}
 
 FORM_URL = (
     "https://docs.google.com/forms/u/0/d/e/"
