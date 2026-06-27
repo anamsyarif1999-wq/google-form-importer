@@ -12,6 +12,16 @@ from zoneinfo import ZoneInfo
 # =====================================================
 # CONFIG
 # =====================================================
+USERS = {
+    "admin": {
+        "password": "admin123",
+        "role": "Admin"
+    },
+    "cs": {
+        "password": "cs123",
+        "role": "CS"
+    }
+}
 
 FORM_URL = (
     "https://docs.google.com/forms/u/0/d/e/"
