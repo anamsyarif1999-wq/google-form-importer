@@ -325,6 +325,17 @@ def set_background_slideshow(image_paths, seconds_per_slide=5):
             animation: bgFade {total_duration}s infinite;
         }}
 
+        /* lapisan gelap di atas foto biar tidak terlalu terang/ramai */
+        .bg-overlay {{
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            background-color: rgba(10, 12, 16, 0.72);
+        }}
+
         @keyframes bgFade {{
             0% {{ opacity: 0; }}
             {fade}% {{ opacity: 1; }}
@@ -337,10 +348,45 @@ def set_background_slideshow(image_paths, seconds_per_slide=5):
             background-color: transparent;
         }}
 
-        div[data-testid="stVerticalBlock"] > div:has(> div.stMarkdown),
+        /* judul lebih tegas */
+        h1 {{
+            color: #ffffff !important;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+        }}
+
+        /* teks umum lebih kontras */
+        .stApp, .stApp p, .stApp label, .stApp span {{
+            color: #f1f1f1;
+        }}
+
+        /* semua kotak tool (number input, file uploader, alert box, dataframe, dsb) */
+        div[data-testid="stNumberInput"],
+        div[data-testid="stFileUploader"],
+        div[data-testid="stFileUploaderDropzone"],
+        div[data-testid="stAlert"],
+        div[data-testid="stDataFrame"],
         div[data-testid="stForm"],
+        div[data-testid="stVerticalBlock"] > div:has(> div.stMarkdown) {{
+            background-color: rgba(20, 22, 28, 0.9) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 0.6rem;
+        }}
+
+        div[data-testid="stNumberInput"] input {{
+            background-color: rgba(30, 33, 40, 0.95) !important;
+            color: #ffffff !important;
+        }}
+
+        /* tombol */
+        .stButton button {{
+            background-color: rgba(25, 27, 33, 0.95) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(255, 255, 255, 0.25) !important;
+        }}
+
         .main .block-container {{
-            background-color: rgba(255, 255, 255, 0.85);
+            background-color: rgba(14, 17, 23, 0.55);
             border-radius: 12px;
             padding: 1.5rem;
         }}
@@ -349,6 +395,7 @@ def set_background_slideshow(image_paths, seconds_per_slide=5):
         <div class="bg-slideshow">
             {layers_html}
         </div>
+        <div class="bg-overlay"></div>
         """,
         unsafe_allow_html=True
     )
