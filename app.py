@@ -4,6 +4,7 @@ import requests
 import random
 import time
 import json
+import base64
 
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -257,6 +258,102 @@ st.set_page_config(
     page_title="MONIT Importer",
     layout="wide"
 )
+
+# =====================================================
+# BACKGROUND IMAGE
+# =====================================================
+
+def set_background_slideshow(image_paths, seconds_per_slide=5):
+
+    b64_list = []
+
+    for p in image_paths:
+
+        img_file = Path(p)
+
+        if not img_file.exists():
+            continue
+
+        b64_list.append(
+            base64.b64encode(
+                img_file.read_bytes()
+            ).decode()
+        )
+
+    if not b64_list:
+        return
+
+    n = len(b64_list)
+    total_duration = seconds_per_slide * n
+
+    # layer <div> untuk tiap foto
+    layers_html = "".join(
+        f'<div class="bg-slide" style="'
+        f'background-image:url(\'data:image/jpg;base64,{b64}\');'
+        f'animation-delay:{i * seconds_per_slide}s;"></div>'
+        for i, b64 in enumerate(b64_list)
+    )
+
+    # persentase fade in/out untuk keyframes
+    fade = max(1, int(100 / (total_duration * 4)))
+    visible_pct = 100 / n
+
+    st.markdown(
+        f"""
+        <style>
+        .bg-slideshow {{
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            overflow: hidden;
+        }}
+
+        .bg-slide {{
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            opacity: 0;
+            animation: bgFade {total_duration}s infinite;
+        }}
+
+        @keyframes bgFade {{
+            0% {{ opacity: 0; }}
+            {fade}% {{ opacity: 1; }}
+            {visible_pct - fade:.2f}% {{ opacity: 1; }}
+            {visible_pct:.2f}% {{ opacity: 0; }}
+            100% {{ opacity: 0; }}
+        }}
+
+        .stApp {{
+            background-color: transparent;
+        }}
+
+        div[data-testid="stVerticalBlock"] > div:has(> div.stMarkdown),
+        div[data-testid="stForm"],
+        .main .block-container {{
+            background-color: rgba(255, 255, 255, 0.85);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }}
+        </style>
+
+        <div class="bg-slideshow">
+            {layers_html}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+set_background_slideshow(["bg1.jpg", "bg2.jpg"], seconds_per_slide=5)
 
 st.title(
     "Excel → Google Form MONIT"
