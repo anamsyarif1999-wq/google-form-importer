@@ -309,6 +309,7 @@ def set_background_slideshow(image_paths, seconds_per_slide=5):
             height: 100vh;
             z-index: -1;
             overflow: hidden;
+            background-color: #0e1117;
         }}
 
         .bg-slide {{
@@ -317,7 +318,7 @@ def set_background_slideshow(image_paths, seconds_per_slide=5):
             left: 0;
             width: 100%;
             height: 100%;
-            background-size: cover;
+            background-size: contain;
             background-position: center;
             background-repeat: no-repeat;
             opacity: 0;
